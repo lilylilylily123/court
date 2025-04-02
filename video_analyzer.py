@@ -18,6 +18,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Load API Key
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
+whisper_exec = os.getenv("WHISPER_EXEC")
+model_path = os.getenv("WHISPER_MODEL")
+
+if not whisper_exec:
+    raise ValueError("❌ Whisper executable not found. Check your .env file.")
+if not model_path:
+    raise ValueError("❌ Whisper model not found. Check your .env file.")
 if not api_key:
     raise ValueError("❌ OpenAI API key not found. Check your .env file.")
 openai.api_key = api_key
@@ -134,18 +141,15 @@ def transcribe_audio(audio_path, output_transcript="transcript.txt"):
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
     start_time = time.time()
-    whisper_exec = "/Users/Lily/projects/court/whisper.cpp/build/bin/whisper-cli"
-    model_path = "/Users/Lily/projects/court/whisper.cpp/models/ggml-base.bin"
-
     # Verify whisper executable exists
-    if not os.path.exists(whisper_exec):
-        error_msg = f"Whisper executable not found at: {whisper_exec}"
+    if not whisper_exec:
+        error_msg = "Whisper executable not found. Check your .env file."
         logging.error(error_msg)
         raise FileNotFoundError(error_msg)
 
     # Verify model file exists
-    if not os.path.exists(model_path):
-        error_msg = f"Whisper model not found at: {model_path}"
+    if not model_path:
+        error_msg = "Whisper model not found. Check your .env file."
         logging.error(error_msg)
         raise FileNotFoundError(error_msg)
 
@@ -158,19 +162,13 @@ def transcribe_audio(audio_path, output_transcript="transcript.txt"):
     try:
         logging.info(f"Executing command: {command}")
 
-        # Execute command and capture output
         result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-        # Log command output for debugging
-        if result.stdout:
-            logging.debug(f"Command stdout: {result.stdout.strip()}")
 
         if result.returncode != 0:
             error_message = result.stderr
             logging.error(f"Transcription failed: {error_message}")
             raise RuntimeError(f"Transcription failed: {error_message}")
 
-        # Check for the output file with correct name
         if os.path.exists(expected_output):
             os.rename(expected_output, output_transcript)
             logging.info(f"Transcription saved to {output_transcript}")
